@@ -1,6 +1,6 @@
 ##############################################################################
 # Simple Makefile the the mad low-level decoder demonstration.
-# (c) 2001, 2002 Bertrand Petit
+# (c) 2001--2004 Bertrand Petit
 #-----------------------------------------------------------------------------
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -29,35 +29,46 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ##############################################################################
-# $Name: v1_0p1 $
-# $Date: 2002/01/08 01:06:56 $
-# $Revision: 1.4 $
+# $Name: v1_1 $
+# $Date: 2004/02/22 03:31:15 $
+# $Revision: 1.10 $
 ##############################################################################
 
 ##############################################################################
 # Configuration section
 ##############################################################################
 
-# Where are located the mad header and library.
+# Where are located the mad header and library?
 MADINCDIR=-I/usr/local/include
 MADLIBDIR=-L/usr/local/lib
 
-# Options passed to the C compiler.
+# Options passed to the C compiler. ------------------------------------------
 CFLAGS=$(MADINCDIR) -g
 LDFLAGS=$(MADLIBDIR) -g
-LOADLIBES=-lmad
-LDLIBS=$(LOADLIBES) # for BSD make
 
-# Theses options are used by the author during development. Comment
+# These options are used by the author during development. Comment
 # them if you're not using gcc.
 CFLAGS+=-pedantic -Wall -Wpointer-arith -Wbad-function-cast	\
 -Wcast-qual -Wcast-align -Wconversion -Wstrict-prototypes	\
 -Wmissing-prototypes -Wmissing-declarations -Wnested-externs
 
-# Where all of this should be installed?
+# Uncomment the following assignment if your C preprocessor defines
+# one of the 'unix', '__unix__, or '__unix' symbol and the system
+# libraries does not provide the getopt() standard function.
+#CPPFLAGS+=-DWITHOUT_GETOPT
+
+# Options passed to the linker. ----------------------------------------------
+# Note that the math library is only used by the wrapping code (for
+# decibel handling), the mad library does not need it.
+LOADLIBES=-lm -lmad
+LDLIBS=$(LOADLIBES) # for BSD make
+
+# Where all of this should be installed? -------------------------------------
 PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 MAN1DIR=$(PREFIX)/man/man1
+
+# Installation-related definitions -------------------------------------------
 
 # Command used to create a directory hierarchy.
 MKDIRHIER=mkdir -p
@@ -73,6 +84,12 @@ INSTALL=install -cp
 .PHONY: all
 all: madlld madlld.1.gz
 
+madlld: madlld.o bstdfile.o
+	$(CC) $(LDFLAGS) $^ $(LOADLIBES) -o $@
+
+madlld.o: madlld.c bstdfile.h
+bstdfile.o: bstdfile.c bstdfile.h
+
 ##############################################################################
 # tests
 ##############################################################################
@@ -80,6 +97,10 @@ all: madlld madlld.1.gz
 # Decode a test stream to a file
 test.cdr: madlld test.mp3 
 	./madlld <test.mp3 >test.cdr
+
+# This may help some peoples.
+test.wav: test.cdr
+	sox test.cdr test.wav
 
 # This uses the play command from the sox package
 .PHONY: play test
@@ -95,8 +116,11 @@ test.mp3:
 # Manual page
 ##############################################################################
 
-madlld.ps: madlld.1
-	groff -Tps -man madlld.1 >madlld.ps
+%-a4.ps: %-letter.ps
+	psresize -Pletter -pa4 <$^ >$@
+
+madlld-man-letter.ps: madlld.1
+	groff -Tps -man madlld.1 >madlld-man-letter.ps
 
 madlld.man: madlld.1
 	groff -Tascii -man madlld.1 | sed 's/.//g' >madlld.man
@@ -108,17 +132,19 @@ madlld.1.gz: madlld.1
 # "Documentation" formating
 ##############################################################################
 
-PSTITLE='Mad low-level demonstration decoder, source code version 1.0'
+PSTITLE='Mad low-level demonstration decoder, source code version 1.1'
 A2PSFLAGS=--header=$(PSTITLE) -C -T 4 --left-title='$$D{%Y-%m-%d %H:%M:%S}'
+SOURCES=madlld.c bstdfile.h bstdfile.c Makefile
 
 .PHONY:ps
-ps: madlld-a4.ps madlld-letter.ps madlld.ps
+ps: madlld-src-a4.ps madlld-src-letter.ps \
+madlld-man-a4.ps madlld-man-letter.ps
 
-madlld-a4.ps: madlld.c Makefile
-	a2ps $(A2PSFLAGS) -M a4 -o madlld-a4.ps madlld.c Makefile
+madlld-src-a4.ps: $(SOURCES)
+	a2ps $(A2PSFLAGS) -M a4 -o $@ $^
 
-madlld-letter.ps: madlld.c Makefile
-	a2ps $(A2PSFLAGS) -M letter -o madlld-letter.ps madlld.c Makefile
+madlld-src-letter.ps: $(SOURCES)
+	a2ps $(A2PSFLAGS) -M letter -o $@ $^
 
 ##############################################################################
 # Installation
@@ -134,7 +160,7 @@ $(BINDIR):
 	$(MKDIRHIER) $(BINDIR)
 
 # Manual page
-$(MAN1DIR)/madlld.1.gz: madlld.1.gz
+$(MAN1DIR)/madlld.1.gz: madlld.1.gz $(MAN1DIR)
 	$(INSTALL) madlld.1.gz $(MAN1DIR)
 $(MAN1DIR):
 	$(MKDIRHIER) $(MAN1DIR)
