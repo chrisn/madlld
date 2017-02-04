@@ -1,6 +1,6 @@
 /* HTAB = 4 */
 /****************************************************************************
- * bstdfile.h -- This module implements a buffered interface for the		*
+ * bstdfile.c -- This module implements a buffered interface for the		*
  * fread(2)	standard function that can signal an eof of file condition		*
  * synchronously with the transmission of the last bytes of a file.			*
  *--------------------------------------------------------------------------*
@@ -38,9 +38,9 @@
  ****************************************************************************/
 
 /*
- * $Name: v1_1 $
- * $Date: 2004/02/13 17:58:22 $
- * $Revision: 1.1 $
+ * $Name: v1_1p1 $
+ * $Date: 2004/03/19 08:08:25 $
+ * $Revision: 1.3 $
  */
 
 /****************************************************************************
@@ -58,9 +58,9 @@
 #define BFILE_BUFSIZE	(8192U)
 
 /* We use some errno symbols that may be undefined. We supply such
- * definitions, all with the 1 value, only to acheive compilation: the
+ * definitions, all with the 1 value, only to achieve compilation: the
  * semantics of the signaled errors may thus be broken. It is the
- * reponssibility of this module user to map the following symbols to
+ * responsibility of this module user to map the following symbols to
  * the symbols provided by the target system.
  */
 #if (!defined(unix) && !defined (__unix__) && !defined(__unix))
@@ -91,18 +91,18 @@
 struct bstdfile
 {
 	/* buffer is an internal buffer used by BstdRead(). live points
-	 * inside that buffer to the data tha was not yet transmited to
+	 * inside that buffer to the data that was not yet transmitted to
 	 * the user. live_size is the number of bytes available for direct
-	 * conspumtion to feed the user buffer from the live pointer.
+	 * consumption to feed the user buffer from the live pointer.
 	 */
 	char	buffer[BFILE_BUFSIZE],
 			*live;
 	size_t	live_size;
 
-	/* fp is the file openned for reading associated with that bfile. */
+	/* fp is the file opened for reading associated with that bfile. */
 	FILE	*fp;
 
-	/* Error managment: eof is non-zero when an end of file condition
+	/* Error management: eof is non-zero when an end of file condition
 	 * was detected. error is zero when no error was detected (error
 	 * is zero when eof is 1), it stores the errno of the detected
 	 * error.
@@ -112,7 +112,7 @@ struct bstdfile
 };
 
 /****************************************************************************
- * Creates a new bstdfile from an already openned file.						*
+ * Creates a new bstdfile from an already opened file.						*
  ****************************************************************************/
 bstdfile_t *NewBstdFile(FILE *fp)
 {
@@ -198,7 +198,7 @@ size_t BstdRead(void *UserBuffer, size_t ElementSize, size_t ElementsCount, bstd
 		return((size_t)0);
 	}
 
-	/* Return immediately if an exceptionnal situation exists. */
+	/* Return immediately if an exceptional situation exists. */
 	if(BstdFile->eof)
 		return((size_t)0);
 	if(BstdFile->error)
@@ -296,6 +296,8 @@ size_t BstdRead(void *UserBuffer, size_t ElementSize, size_t ElementsCount, bstd
 	return(FeededSize);
 }
 
+/*  LocalWords:  HTAB bstdfile fread Datatypes BstdRead fp bfile BstdFile
+ */
 /*
  * Local Variables:
  * tab-width: 4
@@ -303,5 +305,5 @@ size_t BstdRead(void *UserBuffer, size_t ElementSize, size_t ElementsCount, bstd
  */
 
 /****************************************************************************
- * End of file bflle.c														*
+ * End of file bstdfile.c														*
  ****************************************************************************/
