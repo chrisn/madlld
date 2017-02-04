@@ -1,6 +1,6 @@
 ##############################################################################
 # Simple Makefile the the mad low-level decoder demonstration.
-# (c) 2001 Bertrand Petit
+# (c) 2001, 2002 Bertrand Petit
 #-----------------------------------------------------------------------------
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -29,9 +29,9 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ##############################################################################
-# $Name: v1_0 $
-# $Date: 2001/11/13 03:27:38 $
-# $Revision: 1.3 $
+# $Name: v1_0p1 $
+# $Date: 2002/01/08 01:06:56 $
+# $Revision: 1.4 $
 ##############################################################################
 
 ##############################################################################
