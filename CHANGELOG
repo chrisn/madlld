@@ -1,6 +1,27 @@
 -*- text -*-
 
 ------------------------------------------------------------------------------
+madlld v1.1 (2004-02-22)
+------------------------------------------------------------------------------
+
+* Added an explanation about the need for appending MAD_BUFFER_GUARD
+  bytes to the input buffer at the end of streams.
+
+* Added simple examples on the alteration of subband domain samples
+  for audio filtering.
+
+* Added the demonstration of the use of the MAD_EMPHASIS_RESERVED
+  enumeration value, new in libmad v0.15.0b.
+
+* The fixed num to short conversion: uses signed integer numbers as it
+  should had been. The numbers were signed but the C data types were
+  unsigned. Added over range samples clipping.
+
+* Automated the production of the postscript documentation.
+
+* Fixed some typos.
+
+------------------------------------------------------------------------------
 madlld v1.0p1 (2002-01-08)
 ------------------------------------------------------------------------------
 
