@@ -1,10 +1,10 @@
 /* HTAB = 4 */
 /****************************************************************************
- * madlld.c -- A simple program decoding an mpeg audio stream to 16 bits	*
+ * madlld.c -- A simple program decoding an mpeg audio stream to 16-bit		*
  * PCM from stdin to stdout. This program is just a simple sample			*
- * demonstration how the low-level libmad API can be used.					*
+ * demonstrating how the low-level libmad API can be used.					*
  *--------------------------------------------------------------------------*
- * (c) 2001 Bertrand Petit													*
+ * (c) 2001, 2002 Bertrand Petit											*
  *																			*
  * Redistribution and use in source and binary forms, with or without		*
  * modification, are permitted provided that the following conditions		*
@@ -38,9 +38,9 @@
  ****************************************************************************/
 
 /*
- * $Name: v1_0 $
- * $Date: 2001/11/13 03:07:02 $
- * $Revision: 1.8 $
+ * $Name: v1_0p1 $
+ * $Date: 2002/01/08 01:06:56 $
+ * $Revision: 1.9 $
  */
 
 /****************************************************************************
@@ -142,14 +142,15 @@ static unsigned short MadFixedToUshort(mad_fixed_t Fixed)
 	 * W ==> Whole part bits
 	 * F ==> Fractional part bits
 	 *
-	 * This pattern contains MAD_F_FRACBITS, one should alway use this
-	 * macro when working on the bits of a fixed point number. It is
-	 * not guaranteed to be constant over the different platforms
-	 * supported by libmad.
+	 * This pattern contains MAD_F_FRACBITS fractional bits, one
+	 * should alway use this macro when working on the bits of a fixed
+	 * point number. It is not guaranteed to be constant over the
+	 * different platforms supported by libmad.
 	 *
 	 * The unsigned short value is formed by the least significant
 	 * whole part bit, followed by the 15 most significant fractional
-	 * part bits.
+	 * part bits. Warning: this is a quick and dirty way to compute
+	 * the 16-bit number, madplay includes much better algorithms.
 	 */
 	Fixed=Fixed>>(MAD_F_FRACBITS-15);
 	return((unsigned short)Fixed);
@@ -267,15 +268,22 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 							Remaining;
 			unsigned char	*ReadStart;
 
-			/* libmad does not consume all the buffer it's given. Some
-			 * datas, part of a truncated frame, is left unused at the
-			 * end of the buffer. Those datas must be put back at the
-			 * beginning of the buffer and taken in account for
-			 * refilling the buffer. This means that the input buffer
-			 * must be large enough to hold a complete frame at the
-			 * highest observable bit-rate (currently 448 kb/s). XXX=XXX
-			 * Is 2016 bytes the size of the largest frame?
-			 * (448000*(1152/32000))/8
+			/* {1} libmad may not consume all bytes of the input
+			 * buffer. If the last frame in the buffer is not wholly
+			 * contained by it, then that frame's start is pointed by
+			 * the next_frame member of the Stream structure. This
+			 * common situation occurs when mad_frame_decode() fails,
+			 * sets the stream error code to MAD_ERROR_BUFLEN, and
+			 * sets the next_frame pointer to a non NULL value. (See
+			 * also the comment marked {2} bellow.)
+			 *
+			 * When this occurs, the remaining unused bytes must be
+			 * put back at the beginning of the buffer and taken in
+			 * account before refilling the buffer. This means that
+			 * the input buffer must be large enough to hold a whole
+			 * frame at the highest observable bit-rate (currently 448
+			 * kb/s). XXX=XXX Is 2016 bytes the size of the largest
+			 * frame? (448000*(1152/32000))/8
 			 */
 			if(Stream.next_frame!=NULL)
 			{
@@ -327,15 +335,21 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 		 * recoverable or fatal, the error status is checked with the
 		 * MAD_RECOVERABLE macro.
 		 *
-		 * When a fatal error is encountered all decoding activities
-		 * shall be stopped, except when a MAD_ERROR_BUFLEN is
-		 * signaled. This condition means the mad_frame_decode()
-		 * function needs more input to achieve it's work. One shall
-		 * refill the buffer and repeat the mad_frame_decode() call.
+		 * {2} When a fatal error is encountered all decoding
+		 * activities shall be stopped, except when a MAD_ERROR_BUFLEN
+		 * is signaled. This condition means that the
+		 * mad_frame_decode() function needs more input to achieve
+		 * it's work. One shall refill the buffer and repeat the
+		 * mad_frame_decode() call. Some bytes may be left unused at
+		 * the end of the buffer if those bytes forms an incomplete
+		 * frame. Before refilling, the remainign bytes must be moved
+		 * to the begining of the buffer and used for input for the
+		 * next mad_frame_decode() invocation. (See the comments marked
+		 * {1} earlier for more details.)
 		 *
-		 * Recoverable errors are caused by malformed bit-streams in
-		 * this case one can call mad_frame_decode() in order to skip
-		 * the faulty frame and re-sync to the next frame.
+		 * Recoverable errors are caused by malformed bit-streams, in
+		 * this case one can call again mad_frame_decode() in order to
+		 * skip the faulty part and re-sync to the next frame.
 		 */
 		if(mad_frame_decode(&Frame,&Stream))
 			if(MAD_RECOVERABLE(Stream.error))
@@ -367,7 +381,7 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 				break;
 			}
 
-		/* Accounting.The computed frame duration is in the frame
+		/* Accounting. The computed frame duration is in the frame
 		 * header structure. It is expressed as a fixed point number
 		 * whole data type is mad_timer_t. It is different from the
 		 * samples fixed point format and unlike it, it can't directly

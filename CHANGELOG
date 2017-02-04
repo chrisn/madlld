@@ -1,6 +1,18 @@
 -*- text -*-
 
 ------------------------------------------------------------------------------
+madlld v1.0p1 (2002-01-08)
+------------------------------------------------------------------------------
+
+* Just reworked some comments to clarify the MAD_ERROR_BUFLEN error
+  condition and the partial frames at the end of the input buffer.
+
+* Added a warning about the unsatifying quality of the
+  MadFixedToUshort() function.
+
+* Fixed some typos.
+
+------------------------------------------------------------------------------
 madlld v1.0 (2001-11-13)
 ------------------------------------------------------------------------------
 
