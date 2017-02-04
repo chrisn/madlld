@@ -38,9 +38,9 @@
  ****************************************************************************/
 
 /*
- * $Name: v1_1 $
- * $Date: 2004/02/13 17:58:22 $
- * $Revision: 1.1 $
+ * $Name: v1_1p1 $
+ * $Date: 2004/03/19 08:08:25 $
+ * $Revision: 1.2 $
  */
 
 #ifndef BSTDFILE_H
@@ -62,6 +62,8 @@ extern size_t		BstdRead(void *UserBuffer, size_t ElementSize, size_t ElementsCou
 
 #endif /* BSTDFILE_H */
 
+/*  LocalWords:  HTAB bstdfile fread Datatypes
+ */
 /*
  * Local Variables:
  * tab-width: 4
@@ -69,5 +71,5 @@ extern size_t		BstdRead(void *UserBuffer, size_t ElementSize, size_t ElementsCou
  */
 
 /****************************************************************************
- * End of file bstdflle.h													*
+ * End of file bstdfile.h													*
  ****************************************************************************/

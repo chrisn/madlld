@@ -1,6 +1,6 @@
 /* HTAB = 4 */
 /****************************************************************************
- * madlld.c -- A simple program decoding an mpeg audio stream to 16-bit		*
+ * madlld.c -- A simple program decoding an MPEG audio stream to 16-bit		*
  * PCM from stdin to stdout. This program is just a simple sample			*
  * demonstrating how the low-level libmad API can be used.					*
  *--------------------------------------------------------------------------*
@@ -38,9 +38,9 @@
  ****************************************************************************/
 
 /*
- * $Name: v1_1 $
- * $Date: 2004/02/22 03:27:05 $
- * $Revision: 1.18 $
+ * $Name: v1_1p1 $
+ * $Date: 2004/03/19 07:13:13 $
+ * $Revision: 1.20 $
  */
 
 /****************************************************************************
@@ -149,7 +149,7 @@ static const char *MadErrorString(const struct mad_stream *Stream)
 		case MAD_ERROR_BADSTEREO:
 			return("incompatible block_type for JS");
 
-		/* Unknown error. This swich may be out of sync with libmad's
+		/* Unknown error. This switch may be out of sync with libmad's
 		 * defined error codes.
 		 */
 		default:
@@ -159,7 +159,7 @@ static const char *MadErrorString(const struct mad_stream *Stream)
 #endif
 
 /****************************************************************************
- * Converts a sample from mad's fixed point number format to a signed		*
+ * Converts a sample from libmad's fixed point number format to a signed	*
  * short (16 bits).															*
  ****************************************************************************/
 static signed short MadFixedToSshort(mad_fixed_t Fixed)
@@ -242,7 +242,7 @@ static int PrintFrameInfo(FILE *fp, struct mad_header *Header)
 	}
 
 	/* Convert the emphasis to it's printed representation. Note that
-	 * the MAD_EMPHASIS_RESERVED enumeration value appread in libmad
+	 * the MAD_EMPHASIS_RESERVED enumeration value appeared in libmad
 	 * version 0.15.0b.
 	 */
 	switch(Header->emphasis)
@@ -267,7 +267,7 @@ static int PrintFrameInfo(FILE *fp, struct mad_header *Header)
 			break;
 	}
 
-	fprintf(fp,"%s: %lu kb/s audio mpeg layer %s stream %s crc, "
+	fprintf(fp,"%s: %lu kb/s audio MPEG layer %s stream %s CRC, "
 			"%s with %s emphasis at %d Hz sample rate\n",
 			ProgName,Header->bitrate,Layer,
 			Header->flags&MAD_FLAG_PROTECTION?"with":"without",
@@ -284,7 +284,7 @@ static void ApplyFilter(struct mad_frame *Frame)
 		Sample,
 		Samples,
 		SubBand;
-	
+
 	/* There is two application loops, each optimized for the number
 	 * of audio channels to process. The first alternative is for
 	 * two-channel frames, the second is for mono-audio.
@@ -318,7 +318,8 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 	mad_timer_t			Timer;
 	unsigned char		InputBuffer[INPUT_BUFFER_SIZE+MAD_BUFFER_GUARD],
 						OutputBuffer[OUTPUT_BUFFER_SIZE],
-						*OutputPtr=OutputBuffer;
+						*OutputPtr=OutputBuffer,
+						*GuardPtr=NULL;
 	const unsigned char	*OutputBufferEnd=OutputBuffer+OUTPUT_BUFFER_SIZE;
 	int					Status=0,
 						i;
@@ -338,7 +339,7 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 	/* {1} When decoding from a file we need to know when the end of
 	 * the file is reached at the same time as the last bytes are read
 	 * (see also the comment marked {3} bellow). Neither the standard
-	 * C fread() function nor the posix read() system call provides
+	 * C fread() function nor the POSIX read() system call provides
 	 * this feature. We thus need to perform our reads through an
 	 * interface having this feature, this is implemented here by the
 	 * bstdfile.c module.
@@ -391,7 +392,7 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 				ReadSize=INPUT_BUFFER_SIZE,
 					ReadStart=InputBuffer,
 					Remaining=0;
-			
+
 			/* Fill-in the buffer. If an error occurs print a message
 			 * and leave the decoding loop. If the end of stream is
 			 * reached we also leave the loop but the return status is
@@ -402,7 +403,7 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 			{
 				if(ferror(InputFp))
 				{
-					fprintf(stderr,"%s: read error on bitstream (%s)\n",
+					fprintf(stderr,"%s: read error on bit-stream (%s)\n",
 							ProgName,strerror(errno));
 					Status=1;
 				}
@@ -417,12 +418,12 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 			 * detected we append that quantity of bytes at the end of
 			 * the available data. Note that the buffer can't overflow
 			 * as the guard size was allocated but not used the the
-			 * buffer managment code. (See also the comment marked
+			 * buffer management code. (See also the comment marked
 			 * {1}.)
 			 *
 			 * In a message to the mad-dev mailing list on May 29th,
-			 * 2001, Rob leslie explains the guard zone as follows:
-			 * 
+			 * 2001, Rob Leslie explains the guard zone as follows:
+			 *
 			 *    "The reason for MAD_BUFFER_GUARD has to do with the
 			 *    way decoding is performed. In Layer III, Huffman
 			 *    decoding may inadvertently read a few bytes beyond
@@ -437,7 +438,8 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 			 */
 			if(BstdFileEofP(BstdFile))
 			{
-				memset(ReadStart+ReadSize,0,MAD_BUFFER_GUARD);
+				GuardPtr=ReadStart+ReadSize;
+				memset(GuardPtr,0,MAD_BUFFER_GUARD);
 				ReadSize+=MAD_BUFFER_GUARD;
 			}
 
@@ -448,7 +450,7 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 			Stream.error=0;
 		}
 
-		/* Decode the next mpeg frame. The streams is read from the
+		/* Decode the next MPEG frame. The streams is read from the
 		 * buffer, its constituents are break down and stored the the
 		 * Frame structure, ready for examination/alteration or PCM
 		 * synthesis. Decoding options are carried in the Frame
@@ -463,14 +465,14 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 		 * {4} When a fatal error is encountered all decoding
 		 * activities shall be stopped, except when a MAD_ERROR_BUFLEN
 		 * is signaled. This condition means that the
-		 * mad_frame_decode() function needs more input to achieve
-		 * it's work. One shall refill the buffer and repeat the
+		 * mad_frame_decode() function needs more input to complete
+		 * its work. One shall refill the buffer and repeat the
 		 * mad_frame_decode() call. Some bytes may be left unused at
 		 * the end of the buffer if those bytes forms an incomplete
-		 * frame. Before refilling, the remainign bytes must be moved
-		 * to the begining of the buffer and used for input for the
-		 * next mad_frame_decode() invocation. (See the comments marked
-		 * {2} earlier for more details.)
+		 * frame. Before refilling, the remaining bytes must be moved
+		 * to the beginning of the buffer and used for input for the
+		 * next mad_frame_decode() invocation. (See the comments
+		 * marked {2} earlier for more details.)
 		 *
 		 * Recoverable errors are caused by malformed bit-streams, in
 		 * this case one can call again mad_frame_decode() in order to
@@ -480,9 +482,18 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 		{
 			if(MAD_RECOVERABLE(Stream.error))
 			{
-				fprintf(stderr,"%s: recoverable frame level error (%s)\n",
-						ProgName,MadErrorString(&Stream));
-				fflush(stderr);
+				/* Do not print a message if the error is a loss of
+				 * synchronization and this loss is due to the end of
+				 * stream guard bytes. (See the comments marked {3}
+				 * supra for more informations about guard bytes.)
+				 */
+				if(Stream.error!=MAD_ERROR_LOSTSYNC ||
+				   Stream.this_frame!=GuardPtr)
+				{
+					fprintf(stderr,"%s: recoverable frame level error (%s)\n",
+							ProgName,MadErrorString(&Stream));
+					fflush(stderr);
+				}
 				continue;
 			}
 			else
@@ -512,10 +523,10 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 		 * header structure. It is expressed as a fixed point number
 		 * whole data type is mad_timer_t. It is different from the
 		 * samples fixed point format and unlike it, it can't directly
-		 * be added or substracted. The timer module provides several
+		 * be added or subtracted. The timer module provides several
 		 * functions to operate on such numbers. Be careful there, as
-		 * some functions of mad's timer module receive some of their
-		 * mad_timer_t arguments by value!
+		 * some functions of libmad's timer module receive some of
+		 * their mad_timer_t arguments by value!
 		 */
 		FrameCount++;
 		mad_timer_add(&Timer,Frame.header.duration);
@@ -527,13 +538,13 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 		 */
 		if(DoFilter)
 			ApplyFilter(&Frame);
-				
+
 		/* Once decoded the frame is synthesized to PCM samples. No errors
 		 * are reported by mad_synth_frame();
 		 */
 		mad_synth_frame(&Synth,&Frame);
 
-		/* Synthesized samples must be converted from mad's fixed
+		/* Synthesized samples must be converted from libmad's fixed
 		 * point number to the consumer format. Here we use unsigned
 		 * 16 bit big endian integers on two channels. Integer samples
 		 * are temporarily stored in a buffer that is flushed when
@@ -583,7 +594,7 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 	mad_frame_finish(&Frame);
 	mad_stream_finish(&Stream);
 
-	/* If the output buffer is not empty and no error occured during
+	/* If the output buffer is not empty and no error occurred during
      * the last write, then flush it.
 	 */
 	if(OutputPtr!=OutputBuffer && Status!=2)
@@ -598,7 +609,7 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 		}
 	}
 
-	/* Accounting report if no error occured. */
+	/* Accounting report if no error occurred. */
 	if(!Status)
 	{
 		char	Buffer[80];
@@ -615,7 +626,7 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 		 * specify the order and kind of conversion specifications
 		 * that can be used in the format string.
 		 *
-		 * It is best to examine mad's timer.c source-code for details
+		 * It is best to examine libmad's timer.c source-code for details
 		 * of the available units, fraction of units, their meanings,
 		 * the format arguments, etc.
 		 */
@@ -631,20 +642,19 @@ static int MpegAudioDecoder(FILE *InputFp, FILE *OutputFp)
 
 /****************************************************************************
  * Prints a message on stderr explaining the usage of the program. Two		*
- * versionsions of this function are provided, depending on the system		*
- * type.																	*
+ * versions of this function are provided, depending on the system type.	*
  ****************************************************************************/
 static void PrintUsage(void)
 {
-#ifdef HAVE_GETOPT /* This version is for unix systems. */
+#ifdef HAVE_GETOPT /* This version is for Unix systems. */
 	fprintf(stderr,"usage: %s [-p] [-a <amp/atten>]\n"
 			"\t-a\tSets an amplification or attenuation factor expressed\n"
 			"\t\tin dB. The factor bounds are [-Inf,%f].\n"
-			"\t-p\tRequest that the output samples be filtered as if\n"
-			"\t\ttransmited through a telephone switch.\n",
+			"\t-p\tRequests that the output samples be filtered as if\n"
+			"\t\ttransmitted through a telephone switch.\n",
 			ProgName,
 			20.*log10(mad_f_todouble(MAD_F_MAX)));
-#else /* HAVE_GETOPT */ /* This other version is for non-unix systems. */
+#else /* HAVE_GETOPT */ /* This other version is for non-Unix systems. */
 	fprintf(stderr,"usage: %s [<number>] [phone]\n"
 			"\t<number> is a floating point number expressing an "
 			"amplification\n"
@@ -652,7 +662,7 @@ static void PrintUsage(void)
 			"\t\tare [-Inf,%f].\n"
 			"\tThe \"phone\" argument requests that the output samples be "
 			"filtered\n"
-			"\t\tas if transmited through a telephone switch.\n",
+			"\t\tas if transmitted through a telephone switch.\n",
 			ProgName,
 			20.*log10(mad_f_todouble(MAD_F_MAX)));
 #endif /* HAVE_GETOPT */
@@ -671,9 +681,9 @@ static int ParseArgs(int argc, char * const argv[])
 	double			AmpFactor;
 	mad_fixed_t		Amp=MAD_F_ONE;
 
-#ifdef HAVE_GETOPT /* This version is for unix systems. */
+#ifdef HAVE_GETOPT /* This version is for Unix systems. */
 	int				Option;
-	
+
 	/* Parse the command line. */
 	while((Option=getopt(argc,argv,"a:p"))!=-1)
 		switch(Option)
@@ -684,7 +694,7 @@ static int ParseArgs(int argc, char * const argv[])
 			case 'a':
 				/* If the current linear amplification factor is not
 				 * one (MAD_F_ONE) then is was already set. Setting it
-				 * again is not permited.
+				 * again is not permitted.
 				 */
 				if(Amp!=MAD_F_ONE)
 				{
@@ -712,10 +722,10 @@ static int ParseArgs(int argc, char * const argv[])
 				 */
 				Amp=mad_f_tofixed(AmpFactor);
 				break;
-				
+
 			/* {6} The output is filtered through a telephone wire. */
 			case 'p':
-				/* Only one occurence of the option is permited. */
+				/* Only one occurrence of the option is permitted. */
 				if(DoPhoneFilter)
 				{
 					fprintf(stderr,"%s: the phone-line simulation option "
@@ -735,13 +745,13 @@ static int ParseArgs(int argc, char * const argv[])
 				PrintUsage();
 				return(1);
 		}
-#else /* HAVE_GETOPT */ /* This other version is for non-unix systems. */
+#else /* HAVE_GETOPT */ /* This other version is for non-Unix systems. */
 	/* Scan all command-line arguments. */
 	for(i=1;i<argc;i++)
 	{
 		/* Set the amplification factor if the current argument looks
 		 * like a number. Look at the comment of the case marked {5}
-		 * in the unix section for details.
+		 * in the Unix section for details.
 		 */
 		if(*argv[i]=='+' || *argv[i]=='-' || isdigit(*argv[i]))
 		{
@@ -765,7 +775,7 @@ static int ParseArgs(int argc, char * const argv[])
 		else
 			/* Use the phone-like filter if the argument is the *
 			 * 'phone' string. Look at the comment of the case marked
-			 * {6} in the unix section for details.
+			 * {6} in the Unix section for details.
 			 */
 			if(strcmp(argv[i],"phone")==0)
 			{
@@ -794,7 +804,7 @@ static int ParseArgs(int argc, char * const argv[])
 	if(Amp!=MAD_F_ONE || DoPhoneFilter)
 		for(i=0;i<32;i++)
 			Filter[i]=MAD_F_ONE;
-		
+
 	/* The amplification/attenuation is applied to the subband-domain
      * filter definition.
 	 */
@@ -808,7 +818,7 @@ static int ParseArgs(int argc, char * const argv[])
 	/* The telephone-like filter is applied to the subband-domain
 	 * filter definition. All subbands are set to zero except bands 2
 	 * to 6. This programs author has no access to the MPEG audio
-	 * specification, he does not know the frequeciens bands covered
+	 * specification, he does not know the frequencies bands covered
 	 * by the MPEG subbands.
 	 */
 	if(DoPhoneFilter)
@@ -838,19 +848,29 @@ int main(int argc, char *argv[])
 	else
 		ProgName=cptr+1;
 
-	/* The command-line arguments are analysed. */
+	/* The command-line arguments are analyzed. */
 	if(ParseArgs(argc,argv))
 		return(1);
 
 	/* Decode stdin to stdout. */
 	Status=MpegAudioDecoder(stdin,stdout);
 	if(Status)
-		fprintf(stderr,"%s: an error occured during decoding.\n",ProgName);
+		fprintf(stderr,"%s: an error occurred during decoding.\n",ProgName);
 
 	/* All done. */
 	return(Status);
 }
 
+/*  LocalWords:  BUFLEN HTAB madlld libmad bstdfile getopt subband ParseArgs JS
+ */
+/*  LocalWords:  DoFilter subbands errorstr bitrate scalefactor libmad's lu kb
+ */
+/*  LocalWords:  SWWWFFFFFFFFFFFFFFFFFFFFFFFFFFFF FRACBITS madplay fread synth
+ */
+/*  LocalWords:  ApplyFilter strftime fracunits atten tSets tRequest tThe tas
+ */
+/*  LocalWords:  ttransmitted unix todouble tofixed
+ */
 /*
  * Local Variables:
  * tab-width: 4
@@ -858,5 +878,5 @@ int main(int argc, char *argv[])
  */
 
 /****************************************************************************
- * End of file madllc.c														*
+ * End of file madlld.c														*
  ****************************************************************************/
